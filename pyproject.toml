@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlite-pdo-injection-analyzer"
+version = "0.1.0"
+description = "miniKanren-style SQLite PDO blind boolean injection analyzer with a Flask UI"
+requires-python = ">=3.10"
+dependencies = [
+    "Flask>=3.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+sqlite-pdo-analyzer = "pdo_kanren.web:main"
+
+[tool.setuptools.packages.find]
+include = ["pdo_kanren*"]
+
+[tool.setuptools.package-data]
+pdo_kanren = [
+    "templates/*.html",
+    "static/*.css",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

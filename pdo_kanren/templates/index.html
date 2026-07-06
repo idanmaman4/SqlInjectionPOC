@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SQLite PDO Injection Analyzer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="shell">
+    <section class="panel">
+      <h1>SQLite PDO Injection Analyzer</h1>
+      <form method="post" class="form">
+        <label>
+          PDO statement with one <code>?</code>
+          <textarea name="sql" rows="4" spellcheck="false">{{ sql }}</textarea>
+        </label>
+
+        <div class="grid">
+          <label>
+            Context
+            <select name="context">
+              <option value="" {% if context == "" %}selected{% endif %}>infer</option>
+              <option value="numeric" {% if context == "numeric" %}selected{% endif %}>numeric</option>
+              <option value="string_value" {% if context == "string_value" %}selected{% endif %}>string value</option>
+              <option value="string_single" {% if context == "string_single" %}selected{% endif %}>quoted ?</option>
+            </select>
+          </label>
+
+          <label>
+            Max payload length
+            <input name="max_length" value="{{ max_length }}" inputmode="numeric">
+          </label>
+
+          <label>
+            Allowed chars
+            <input name="allowed_chars" value="{{ allowed_chars }}" placeholder="blank means any">
+          </label>
+
+          <label>
+            Result limit
+            <input name="limit" value="{{ limit }}" inputmode="numeric">
+          </label>
+
+          <label>
+            Max padding
+            <input name="max_padding" value="{{ max_padding }}" inputmode="numeric">
+          </label>
+        </div>
+
+        <div class="checks">
+          <label><input type="checkbox" name="controlled" {% if controlled %}checked{% endif %}> attacker controls param</label>
+          <label><input type="checkbox" name="pdo_bound" {% if pdo_bound %}checked{% endif %}> safely PDO-bound</label>
+        </div>
+
+        <div class="actions">
+          <button type="submit" name="submit_action" value="analyze">Analyze</button>
+          <button type="submit" name="submit_action" value="generate">Generator</button>
+        </div>
+
+        <input type="hidden" name="payload_index" value="{{ payload_index }}">
+      </form>
+    </section>
+
+    {% if error %}
+      <section class="panel error">
+        <h2>Error</h2>
+        <pre>{{ error }}</pre>
+      </section>
+    {% endif %}
+
+    {% if generator %}
+      <section class="panel">
+        <h2>Payload {{ generator.number }}</h2>
+        <p><span class="status {{ generator.status }}">{{ generator.status }}</span></p>
+        {% if generator.payload %}
+          {% if generator.status == "exhausted" %}
+            <p>No later payload is available.</p>
+          {% endif %}
+          <article class="result">
+            <div class="meta">
+              <span>#{{ generator.number }}</span>
+              <span>{{ generator.payload.context }}</span>
+              <span>{{ generator.payload.payload_shape }}</span>
+            </div>
+            <label>Payload</label>
+            <pre>{{ generator.payload.payload }}</pre>
+            <label>Final SQL</label>
+            <pre>{{ generator.payload.final_sql | sql_highlight }}</pre>
+          </article>
+          <form method="post" class="pager">
+            <input type="hidden" name="sql" value="{{ sql }}">
+            <input type="hidden" name="context" value="{{ context }}">
+            <input type="hidden" name="max_length" value="{{ max_length }}">
+            <input type="hidden" name="allowed_chars" value="{{ allowed_chars }}">
+            <input type="hidden" name="limit" value="{{ limit }}">
+            <input type="hidden" name="max_padding" value="{{ max_padding }}">
+            <input type="hidden" name="payload_index" value="{{ payload_index }}">
+            {% if controlled %}<input type="hidden" name="controlled" value="on">{% endif %}
+            {% if pdo_bound %}<input type="hidden" name="pdo_bound" value="on">{% endif %}
+            <button type="submit" name="submit_action" value="previous" {% if not generator.has_previous %}disabled{% endif %}>Previous</button>
+            <button type="submit" name="submit_action" value="next">Next</button>
+          </form>
+        {% elif generator.status == "exhausted" %}
+          <p>No later payload is available.</p>
+          <form method="post" class="pager">
+            <input type="hidden" name="sql" value="{{ sql }}">
+            <input type="hidden" name="context" value="{{ context }}">
+            <input type="hidden" name="max_length" value="{{ max_length }}">
+            <input type="hidden" name="allowed_chars" value="{{ allowed_chars }}">
+            <input type="hidden" name="limit" value="{{ limit }}">
+            <input type="hidden" name="max_padding" value="{{ max_padding }}">
+            <input type="hidden" name="payload_index" value="{{ payload_index }}">
+            {% if controlled %}<input type="hidden" name="controlled" value="on">{% endif %}
+            {% if pdo_bound %}<input type="hidden" name="pdo_bound" value="on">{% endif %}
+            <button type="submit" name="submit_action" value="previous" {% if not generator.has_previous %}disabled{% endif %}>Previous</button>
+          </form>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    {% if result %}
+      <section class="panel">
+        <h2>Status: {{ result.status }}</h2>
+        {% if result.injections %}
+          <div class="results">
+            {% for item in result.injections %}
+              <article class="result">
+                <div class="meta">
+                  <span>{{ item.context }}</span>
+                  <span>{{ item.payload_shape }}</span>
+                </div>
+                <label>Payload</label>
+                <pre>{{ item.payload }}</pre>
+                <label>Final SQL</label>
+                <pre>{{ item.final_sql | sql_highlight }}</pre>
+              </article>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>
