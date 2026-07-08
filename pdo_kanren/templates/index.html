@@ -4,58 +4,79 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SQLite PDO Injection Analyzer</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
   <main class="shell">
-    <section class="panel">
-      <h1>SQLite PDO Injection Analyzer</h1>
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">SQLite / PDO</p>
+        <h1>Injection Analyzer</h1>
+      </div>
+      <span class="app-badge">one placeholder</span>
+    </header>
+
+    <section class="panel form-panel">
       <form method="post" class="form">
-        <label>
-          PDO statement with one <code>?</code>
-          <textarea name="sql" rows="4" spellcheck="false">{{ sql }}</textarea>
-        </label>
-
-        <div class="grid">
-          <label>
-            Context
-            <select name="context">
-              <option value="" {% if context == "" %}selected{% endif %}>infer</option>
-              <option value="numeric" {% if context == "numeric" %}selected{% endif %}>numeric</option>
-              <option value="string_value" {% if context == "string_value" %}selected{% endif %}>string value</option>
-              <option value="string_single" {% if context == "string_single" %}selected{% endif %}>quoted ?</option>
-            </select>
+        <div class="form-layout">
+          <label class="editor-field">
+            <span class="field-label">PDO statement with one <code>?</code></span>
+            <span class="editor-shell">
+              <span class="editor-bar">SQL</span>
+              <textarea name="sql" rows="8" spellcheck="false">{{ sql }}</textarea>
+            </span>
           </label>
 
-          <label>
-            Max payload length
-            <input name="max_length" value="{{ max_length }}" inputmode="numeric">
-          </label>
+          <aside class="control-rail">
+            <fieldset>
+              <legend>Parameter</legend>
+              <label>
+                Context
+                <select name="context">
+                  <option value="" {% if context == "" %}selected{% endif %}>infer</option>
+                  <option value="numeric" {% if context == "numeric" %}selected{% endif %}>numeric</option>
+                  <option value="string_value" {% if context == "string_value" %}selected{% endif %}>string value</option>
+                  <option value="string_single" {% if context == "string_single" %}selected{% endif %}>quoted ?</option>
+                </select>
+              </label>
 
-          <label>
-            Allowed chars
-            <input name="allowed_chars" value="{{ allowed_chars }}" placeholder="blank means any">
-          </label>
+              <div class="checks">
+                <label><input type="checkbox" name="controlled" {% if controlled %}checked{% endif %}> attacker controls param</label>
+                <label><input type="checkbox" name="pdo_bound" {% if pdo_bound %}checked{% endif %}> safely PDO-bound</label>
+              </div>
+            </fieldset>
 
-          <label>
-            Result limit
-            <input name="limit" value="{{ limit }}" inputmode="numeric">
-          </label>
+            <details class="advanced" {% if max_length or allowed_chars %}open{% endif %}>
+              <summary>Search options</summary>
+              <div class="advanced-grid">
+                <label>
+                  Max payload length
+                  <input name="max_length" value="{{ max_length }}" inputmode="numeric">
+                </label>
 
-          <label>
-            Max padding
-            <input name="max_padding" value="{{ max_padding }}" inputmode="numeric">
-          </label>
-        </div>
+                <label>
+                  Allowed chars
+                  <input name="allowed_chars" value="{{ allowed_chars }}" placeholder="blank means any">
+                </label>
 
-        <div class="checks">
-          <label><input type="checkbox" name="controlled" {% if controlled %}checked{% endif %}> attacker controls param</label>
-          <label><input type="checkbox" name="pdo_bound" {% if pdo_bound %}checked{% endif %}> safely PDO-bound</label>
-        </div>
+                <label>
+                  Result limit
+                  <input name="limit" value="{{ limit }}" inputmode="numeric">
+                </label>
 
-        <div class="actions">
-          <button type="submit" name="submit_action" value="analyze">Analyze</button>
-          <button type="submit" name="submit_action" value="generate">Generator</button>
+                <label>
+                  Max padding
+                  <input name="max_padding" value="{{ max_padding }}" inputmode="numeric">
+                </label>
+              </div>
+            </details>
+
+            <div class="actions mode-actions">
+              <button type="submit" name="submit_action" value="analyze">Analyze</button>
+              <button class="secondary" type="submit" name="submit_action" value="generate">Generator</button>
+            </div>
+          </aside>
         </div>
 
         <input type="hidden" name="payload_index" value="{{ payload_index }}">
@@ -71,11 +92,13 @@
 
     {% if generator %}
       <section class="panel">
-        <h2>Payload {{ generator.number }}</h2>
-        <p><span class="status {{ generator.status }}">{{ generator.status }}</span></p>
+        <div class="section-heading">
+          <h2>Payload {{ generator.number }}</h2>
+          <span class="status {{ generator.status }}">{{ generator.status }}</span>
+        </div>
         {% if generator.payload %}
           {% if generator.status == "exhausted" %}
-            <p>No later payload is available.</p>
+            <p class="empty-note">No later payload is available.</p>
           {% endif %}
           <article class="result">
             <div class="meta">
@@ -83,10 +106,20 @@
               <span>{{ generator.payload.context }}</span>
               <span>{{ generator.payload.payload_shape }}</span>
             </div>
-            <label>Payload</label>
-            <pre>{{ generator.payload.payload }}</pre>
-            <label>Final SQL</label>
-            <pre>{{ generator.payload.final_sql | sql_highlight }}</pre>
+            <div class="code-block">
+              <div class="code-title">
+                <span>Payload</span>
+                <button class="copy-button" type="button" data-copy="{{ generator.payload.payload }}">Copy</button>
+              </div>
+              <pre>{{ generator.payload.payload }}</pre>
+            </div>
+            <div class="code-block">
+              <div class="code-title">
+                <span>Final SQL</span>
+                <button class="copy-button" type="button" data-copy="{{ generator.payload.final_sql }}">Copy</button>
+              </div>
+              <pre>{{ generator.payload.final_sql | sql_highlight }}</pre>
+            </div>
           </article>
           <form method="post" class="pager">
             <input type="hidden" name="sql" value="{{ sql }}">
@@ -102,7 +135,7 @@
             <button type="submit" name="submit_action" value="next">Next</button>
           </form>
         {% elif generator.status == "exhausted" %}
-          <p>No later payload is available.</p>
+          <p class="empty-note">No later payload is available.</p>
           <form method="post" class="pager">
             <input type="hidden" name="sql" value="{{ sql }}">
             <input type="hidden" name="context" value="{{ context }}">
@@ -121,7 +154,10 @@
 
     {% if result %}
       <section class="panel">
-        <h2>Status: {{ result.status }}</h2>
+        <div class="section-heading">
+          <h2>Analysis</h2>
+          <span class="status {{ result.status }}">{{ result.status }}</span>
+        </div>
         {% if result.injections %}
           <div class="results">
             {% for item in result.injections %}
@@ -130,16 +166,55 @@
                   <span>{{ item.context }}</span>
                   <span>{{ item.payload_shape }}</span>
                 </div>
-                <label>Payload</label>
-                <pre>{{ item.payload }}</pre>
-                <label>Final SQL</label>
-                <pre>{{ item.final_sql | sql_highlight }}</pre>
+                <div class="code-block">
+                  <div class="code-title">
+                    <span>Payload</span>
+                    <button class="copy-button" type="button" data-copy="{{ item.payload }}">Copy</button>
+                  </div>
+                  <pre>{{ item.payload }}</pre>
+                </div>
+                <div class="code-block">
+                  <div class="code-title">
+                    <span>Final SQL</span>
+                    <button class="copy-button" type="button" data-copy="{{ item.final_sql }}">Copy</button>
+                  </div>
+                  <pre>{{ item.final_sql | sql_highlight }}</pre>
+                </div>
               </article>
             {% endfor %}
           </div>
+        {% else %}
+          <p class="empty-note">No payloads matched the current constraints.</p>
         {% endif %}
       </section>
     {% endif %}
   </main>
+  <script>
+    const scrollStorageKey = "pdo-kanren-scroll-y";
+
+    document.querySelectorAll("form").forEach((form) => {
+      form.addEventListener("submit", () => {
+        sessionStorage.setItem(scrollStorageKey, String(window.scrollY));
+      });
+    });
+
+    const savedScrollY = sessionStorage.getItem(scrollStorageKey);
+    if (savedScrollY !== null) {
+      sessionStorage.removeItem(scrollStorageKey);
+      window.requestAnimationFrame(() => {
+        window.scrollTo(0, Number(savedScrollY));
+      });
+    }
+
+    document.querySelectorAll("[data-copy]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(button.dataset.copy);
+        button.textContent = "Copied";
+        window.setTimeout(() => {
+          button.textContent = "Copy";
+        }, 1200);
+      });
+    });
+  </script>
 </body>
 </html>
