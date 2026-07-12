@@ -49,7 +49,7 @@ def index():
         pdo_bound=False,
         max_length="",
         allowed_chars="",
-        limit=10,
+        limit=3,
         max_padding=4,
         mode="analyze",
         payload_index=0,
@@ -67,13 +67,16 @@ def analyze_query():
     pdo_bound = request.form.get("pdo_bound") == "on"
     max_length = request.form.get("max_length", "")
     allowed_chars = request.form.get("allowed_chars", "")
-    limit = int(request.form.get("limit", "10") or "10")
-    max_padding = int(request.form.get("max_padding", "2") or "2")
+    limit_value = request.form.get("limit", "3") or "3"
+    max_padding_value = request.form.get("max_padding", "2") or "2"
     submit_action = request.form.get("submit_action", "analyze")
-    payload_index = max(0, int(request.form.get("payload_index", "0") or "0"))
+    payload_index_value = request.form.get("payload_index", "0") or "0"
     mode = "generator" if submit_action in {"generate", "previous", "next"} else "analyze"
 
     try:
+        limit = int(limit_value)
+        max_padding = int(max_padding_value)
+        payload_index = max(0, int(payload_index_value))
         constraints = constraint_from_form(
             controlled=controlled,
             context=context,
@@ -102,10 +105,13 @@ def analyze_query():
             generator = None
             payload_index = 0
         error = None
-    except Exception as exc:
+    except (TypeError, ValueError) as exc:
+        limit = limit_value
+        max_padding = max_padding_value
+        payload_index = 0
         result = None
         generator = None
-        error = str(exc)
+        error = f"Invalid input: {exc}"
 
     return render_index(
         sql=sql,

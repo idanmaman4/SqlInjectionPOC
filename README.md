@@ -5,9 +5,9 @@ This project asks:
 > Given a SQLite PDO statement containing one `?` parameter and a set of
 > constraints, is blind boolean-based SQL injection possible?
 
-The current implementation is Python-only. It uses a tiny miniKanren-style
-relational core to lazily generate candidate payloads and a Flask frontend for
-interactive use.
+The current implementation is Python-only. It performs a bounded search for
+paired true/false Boolean probes and provides a Flask frontend for interactive
+use.
 
 ## Scope
 
@@ -31,8 +31,8 @@ query = pdo_query("SELECT * FROM users WHERE name = '?' AND active = 1")
 constraints = [("controlled", "param"), ("allowed_chars", "param", "any")]
 
 for item in legal_injections(query, constraints, limit=3):
-    print(item["payload"])
-    print(item["final_sql"])
+    print(item["true_payload"], item["false_payload"])
+    print(item["true_final_sql"], item["false_final_sql"])
 ```
 
 Use `max_length` to constrain the parameter:
@@ -90,7 +90,7 @@ uv tool install . --force
 
 ## File Layout
 
-- `pdo_kanren/mini.py`: tiny miniKanren-style relational core.
+- `pdo_kanren/mini.py`: retained tiny relational-core utility.
 - `pdo_kanren/analyzer.py`: one-parameter PDO injection analyzer.
 - `pdo_kanren/web.py`: Flask frontend and console entry point.
 - `pdo_kanren/templates/index.html`: frontend form and results page.

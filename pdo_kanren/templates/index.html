@@ -21,10 +21,10 @@
       <form method="post" class="form">
         <div class="form-layout">
           <label class="editor-field">
-            <span class="field-label">PDO statement with one <code>?</code></span>
+            <span class="field-label">SQL template with one interpolated <code>?</code></span>
             <span class="editor-shell">
               <span class="editor-bar">SQL</span>
-              <textarea name="sql" rows="8" spellcheck="false">{{ sql }}</textarea>
+              <textarea name="sql" rows="5" spellcheck="false">{{ sql }}</textarea>
             </span>
           </label>
 
@@ -47,12 +47,12 @@
               </div>
             </fieldset>
 
-            <details class="advanced" {% if max_length or allowed_chars %}open{% endif %}>
+            <details class="advanced" open>
               <summary>Search options</summary>
               <div class="advanced-grid">
                 <label>
                   Max payload length
-                  <input name="max_length" value="{{ max_length }}" inputmode="numeric">
+                  <input name="max_length" value="{{ max_length }}" type="number" min="0">
                 </label>
 
                 <label>
@@ -62,12 +62,12 @@
 
                 <label>
                   Result limit
-                  <input name="limit" value="{{ limit }}" inputmode="numeric">
+                  <input name="limit" value="{{ limit }}" type="number" min="0" max="100">
                 </label>
 
                 <label>
                   Max padding
-                  <input name="max_padding" value="{{ max_padding }}" inputmode="numeric">
+                  <input name="max_padding" value="{{ max_padding }}" type="number" min="0" max="5">
                 </label>
               </div>
             </details>
@@ -104,21 +104,68 @@
             <div class="meta">
               <span>#{{ generator.number }}</span>
               <span>{{ generator.payload.context }}</span>
-              <span>{{ generator.payload.payload_shape }}</span>
+              <span>{{ generator.payload.kind }}</span>
+            </div>
+            <section class="oracle-simulation" aria-label="Simulated true and false website responses">
+              <h3>Website response simulation</h3>
+              <p class="simulation-note">The same page behavior is simulated once with a true condition and once with a false condition.</p>
+              <div class="oracle-comparison">
+                <div class="oracle-case oracle-true">
+                  <span class="oracle-label">True probe</span>
+                  <code>{{ generator.payload.true_payload }}</code>
+                  <div class="browser-response">
+                    <span class="browser-bar">Website response</span>
+                    <strong>{{ generator.payload.true_response }}</strong>
+                  </div>
+                </div>
+                <div class="oracle-case oracle-false">
+                  <span class="oracle-label">False probe</span>
+                  <code>{{ generator.payload.false_payload }}</code>
+                  <div class="browser-response">
+                    <span class="browser-bar">Website response</span>
+                    <strong>{{ generator.payload.false_response }}</strong>
+                  </div>
+                </div>
+              </div>
+              <p class="oracle-verdict"><span aria-hidden="true">↔</span> Different responses confirm a Boolean oracle.</p>
+            </section>
+            <section class="nested-query-guide" aria-label="Nested query placement">
+              <h3>Where the nested query goes</h3>
+              <p>The basic probes above confirm the response channel. Replace the highlighted predicate slot with a scalar subquery condition to test one fact at a time.</p>
+              <pre class="payload-template">{{ generator.payload.nested_query_template }}</pre>
+              <div class="slot-key"><code>&lt;nested query predicate&gt;</code><span>data-dependent condition evaluated by SQLite</span></div>
+              <details>
+                <summary>Show harmless PoC example</summary>
+                <pre>{{ generator.payload.nested_query_example }}</pre>
+              </details>
+            </section>
+            <div class="code-block">
+              <div class="code-title">
+                <span>True payload</span>
+                <button class="copy-button" type="button" data-copy="{{ generator.payload.true_payload }}" aria-label="Copy true payload">Copy</button>
+              </div>
+              <pre>{{ generator.payload.true_payload }}</pre>
             </div>
             <div class="code-block">
               <div class="code-title">
-                <span>Payload</span>
-                <button class="copy-button" type="button" data-copy="{{ generator.payload.payload }}">Copy</button>
+                <span>True final SQL</span>
+                <button class="copy-button" type="button" data-copy="{{ generator.payload.true_final_sql }}" aria-label="Copy true final SQL">Copy</button>
               </div>
-              <pre>{{ generator.payload.payload }}</pre>
+              <pre>{{ generator.payload.true_final_sql | sql_highlight }}</pre>
             </div>
             <div class="code-block">
               <div class="code-title">
-                <span>Final SQL</span>
-                <button class="copy-button" type="button" data-copy="{{ generator.payload.final_sql }}">Copy</button>
+                <span>False payload</span>
+                <button class="copy-button" type="button" data-copy="{{ generator.payload.false_payload }}" aria-label="Copy false payload">Copy</button>
               </div>
-              <pre>{{ generator.payload.final_sql | sql_highlight }}</pre>
+              <pre>{{ generator.payload.false_payload }}</pre>
+            </div>
+            <div class="code-block">
+              <div class="code-title">
+                <span>False final SQL</span>
+                <button class="copy-button" type="button" data-copy="{{ generator.payload.false_final_sql }}" aria-label="Copy false final SQL">Copy</button>
+              </div>
+              <pre>{{ generator.payload.false_final_sql | sql_highlight }}</pre>
             </div>
           </article>
           <form method="post" class="pager">
@@ -158,27 +205,76 @@
           <h2>Analysis</h2>
           <span class="status {{ result.status }}">{{ result.status }}</span>
         </div>
+        <p>{{ result.message }}</p>
         {% if result.injections %}
           <div class="results">
             {% for item in result.injections %}
               <article class="result">
+                <h3>Witness {{ loop.index }}</h3>
                 <div class="meta">
                   <span>{{ item.context }}</span>
-                  <span>{{ item.payload_shape }}</span>
+                  <span>{{ item.kind }}</span>
+                </div>
+                <section class="oracle-simulation" aria-label="Simulated true and false website responses for witness {{ loop.index }}">
+                  <h4>Website response simulation</h4>
+                  <p class="simulation-note">The same page behavior is simulated once with a true condition and once with a false condition.</p>
+                  <div class="oracle-comparison">
+                    <div class="oracle-case oracle-true">
+                      <span class="oracle-label">True probe</span>
+                      <code>{{ item.true_payload }}</code>
+                      <div class="browser-response">
+                        <span class="browser-bar">Website response</span>
+                        <strong>{{ item.true_response }}</strong>
+                      </div>
+                    </div>
+                    <div class="oracle-case oracle-false">
+                      <span class="oracle-label">False probe</span>
+                      <code>{{ item.false_payload }}</code>
+                      <div class="browser-response">
+                        <span class="browser-bar">Website response</span>
+                        <strong>{{ item.false_response }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="oracle-verdict"><span aria-hidden="true">↔</span> Different responses confirm a Boolean oracle.</p>
+                </section>
+                <section class="nested-query-guide" aria-label="Nested query placement for witness {{ loop.index }}">
+                  <h4>Where the nested query goes</h4>
+                  <p>The basic probes above confirm the response channel. Replace the highlighted predicate slot with a scalar subquery condition to test one fact at a time.</p>
+                  <pre class="payload-template">{{ item.nested_query_template }}</pre>
+                  <div class="slot-key"><code>&lt;nested query predicate&gt;</code><span>data-dependent condition evaluated by SQLite</span></div>
+                  <details>
+                    <summary>Show harmless PoC example</summary>
+                    <pre>{{ item.nested_query_example }}</pre>
+                  </details>
+                </section>
+                <div class="code-block">
+                  <div class="code-title">
+                    <span>True payload</span>
+                    <button class="copy-button" type="button" data-copy="{{ item.true_payload }}" aria-label="Copy true payload for witness {{ loop.index }}">Copy</button>
+                  </div>
+                  <pre>{{ item.true_payload }}</pre>
                 </div>
                 <div class="code-block">
                   <div class="code-title">
-                    <span>Payload</span>
-                    <button class="copy-button" type="button" data-copy="{{ item.payload }}">Copy</button>
+                    <span>True final SQL</span>
+                    <button class="copy-button" type="button" data-copy="{{ item.true_final_sql }}" aria-label="Copy true final SQL for witness {{ loop.index }}">Copy</button>
                   </div>
-                  <pre>{{ item.payload }}</pre>
+                  <pre>{{ item.true_final_sql | sql_highlight }}</pre>
                 </div>
                 <div class="code-block">
                   <div class="code-title">
-                    <span>Final SQL</span>
-                    <button class="copy-button" type="button" data-copy="{{ item.final_sql }}">Copy</button>
+                    <span>False payload</span>
+                    <button class="copy-button" type="button" data-copy="{{ item.false_payload }}" aria-label="Copy false payload for witness {{ loop.index }}">Copy</button>
                   </div>
-                  <pre>{{ item.final_sql | sql_highlight }}</pre>
+                  <pre>{{ item.false_payload }}</pre>
+                </div>
+                <div class="code-block">
+                  <div class="code-title">
+                    <span>False final SQL</span>
+                    <button class="copy-button" type="button" data-copy="{{ item.false_final_sql }}" aria-label="Copy false final SQL for witness {{ loop.index }}">Copy</button>
+                  </div>
+                  <pre>{{ item.false_final_sql | sql_highlight }}</pre>
                 </div>
               </article>
             {% endfor %}
